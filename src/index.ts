@@ -16,18 +16,25 @@ import { registerTools } from "./tools.js";
 const port = parseInt(process.env.PORT ?? "3456", 10);
 const apiKey = process.env.API_KEY ?? "";
 const publicUrl = process.env.PUBLIC_URL ?? "https://world.example.com";
-const defaultLat = parseFloat(process.env.WEATHER_LAT ?? "40.7128");
-const defaultLon = parseFloat(process.env.WEATHER_LON ?? "-74.0060");
+
+// Location config -- must be set in .env on each deployment.
+// No sensible default: wrong coordinates = wrong city's weather.
+const defaultLat = parseFloat(process.env.WEATHER_LAT ?? "");
+const defaultLon = parseFloat(process.env.WEATHER_LON ?? "");
 
 if (!apiKey) {
   console.error("[startup] API_KEY env var is required");
+  process.exit(1);
+}
+if (isNaN(defaultLat) || isNaN(defaultLon)) {
+  console.error("[startup] WEATHER_LAT and WEATHER_LON env vars are required (decimal degrees)");
   process.exit(1);
 }
 
 console.log("[startup] world-tools-mcp starting");
 console.log(`  port       : ${port}`);
 console.log(`  public_url : ${publicUrl}`);
-console.log(`  weather    : ${defaultLat}, ${defaultLon}`);
+console.log(`  weather    : configured`);
 
 // ── OAuth ─────────────────────────────────────────────────────────────────────
 
