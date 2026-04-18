@@ -48,6 +48,8 @@ No default coordinates: wrong coords = wrong city's weather.
 
 - **Service path:** `~/world-tools-mcp` on VPS
 - **Public URL:** `world.example.com`
-- **Process manager:** pm2 (`pm2 restart world-tools`)
+- **Process manager:** pm2 via `ecosystem.config.js`
 
-To deploy: `cd ~/world-tools-mcp && git pull && npm install && npm run build && pm2 restart world-tools`
+To deploy: `cd ~/world-tools-mcp && git pull && npm install && npm run build && pm2 reload ecosystem.config.js`
+
+First-time setup: `pm2 start ecosystem.config.js && pm2 save`
