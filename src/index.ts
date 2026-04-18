@@ -2,6 +2,7 @@ import express from "express";
 import type { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import { createServer as createHttpServer } from "http";
+import { execSync } from "child_process";
 import { randomUUID } from "crypto";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
@@ -140,19 +141,38 @@ app.delete("/mcp", mcpHandler);
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 
+// Kill any process holding our port before binding. Handles the case where a
+// previous instance didn't fully release the port before pm2 restarted us.
+// fuser is standard on Linux VPS; failure is silently ignored (port was free).
+try {
+  execSync(`fuser -k ${port}/tcp`, { stdio: "ignore" });
+  console.log(`[startup] cleared port ${port}`);
+} catch { /* port was already free */ }
+
 const httpServer = createHttpServer(app);
 httpServer.setTimeout(30_000);
 httpServer.on("clientError", (_err, socket) => socket.destroy());
+httpServer.on("error", (err: NodeJS.ErrnoException) => {
+  console.error(`[startup] failed to bind port ${port}:`, err.message);
+  process.exit(1);
+});
 httpServer.listen(port, "127.0.0.1", () => {
   console.log(`[startup] listening on 127.0.0.1:${port}`);
 });
 
 const shutdown = (signal: string) => {
-  console.log(`[process] ${signal} — shutting down`);
+  console.log(`[process] ${signal} -- shutting down`);
+  httpServer.closeAllConnections?.();
   httpServer.close(() => process.exit(0));
   setTimeout(() => process.exit(0), 5_000).unref();
 };
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 process.on("SIGINT", () => shutdown("SIGINT"));
-process.on("uncaughtException", (err) => console.error("[process] Uncaught:", err));
-process.on("unhandledRejection", (r) => console.error("[process] Unhandled rejection:", r));
+process.on("uncaughtException", (err) => {
+  console.error("[process] Uncaught:", err);
+  process.exit(1);
+});
+process.on("unhandledRejection", (r) => {
+  console.error("[process] Unhandled rejection:", r);
+  process.exit(1);
+});
