@@ -50,6 +50,6 @@ No default coordinates: wrong coords = wrong city's weather.
 - **Public URL:** `world.example.com`
 - **Process manager:** pm2 via `ecosystem.config.js`
 
-To deploy: `cd ~/world-tools-mcp && git pull && npm install && npm run build && pm2 reload ecosystem.config.js`
+To deploy: `cd ~/world-tools-mcp && git pull && npm install && npm run build && pm2 reload ecosystem.config.cjs`
 
-First-time setup: `pm2 start ecosystem.config.js && pm2 save`
+First-time setup: `pm2 start ecosystem.config.cjs && pm2 save`
