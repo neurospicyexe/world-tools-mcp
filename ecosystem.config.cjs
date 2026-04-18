@@ -3,11 +3,29 @@
  * VPS deployment (the VPS 6GB)
  *
  * Usage:
- *   pm2 start ecosystem.config.js        # first-time start
- *   pm2 reload ecosystem.config.js       # rolling restart (scoped to this file only)
+ *   pm2 start ecosystem.config.cjs        # first-time start
+ *   pm2 reload ecosystem.config.cjs       # rolling restart (scoped to this file only)
  */
 
-require("dotenv").config({ path: "/home/nullsafe/world-tools-mcp/.env" });
+const fs = require("fs");
+
+// Parse .env manually -- pm2 runs this file in its own global context,
+// not the project's node_modules, so require('dotenv') would fail.
+const env = {};
+try {
+  const lines = fs.readFileSync("/home/nullsafe/world-tools-mcp/.env", "utf8").split("\n");
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eq = trimmed.indexOf("=");
+    if (eq < 0) continue;
+    const key = trimmed.slice(0, eq).trim();
+    const val = trimmed.slice(eq + 1).trim().replace(/^["']|["']$/g, "");
+    if (key) env[key] = val;
+  }
+} catch (e) {
+  console.error("[ecosystem] failed to load .env:", e.message);
+}
 
 module.exports = {
   apps: [
@@ -26,13 +44,13 @@ module.exports = {
       out_file: "/home/nullsafe/.pm2/logs/world-tools-out.log",
       log_date_format: "YYYY-MM-DD HH:mm:ss",
       env: {
-        NODE_ENV: "production",
+        NODE_ENV:    "production",
         NODE_OPTIONS: "--dns-result-order=ipv4first",
-        PORT: process.env.PORT ?? "3456",
-        API_KEY: process.env.API_KEY,
-        PUBLIC_URL: process.env.PUBLIC_URL ?? "https://world.example.com",
-        WEATHER_LAT: process.env.WEATHER_LAT,
-        WEATHER_LON: process.env.WEATHER_LON,
+        PORT:        env.PORT        ?? "3456",
+        API_KEY:     env.API_KEY,
+        PUBLIC_URL:  env.PUBLIC_URL  ?? "https://world.example.com",
+        WEATHER_LAT: env.WEATHER_LAT,
+        WEATHER_LON: env.WEATHER_LON,
       },
     },
   ],
