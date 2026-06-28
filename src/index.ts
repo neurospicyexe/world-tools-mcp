@@ -15,7 +15,7 @@ import { registerTools } from "./tools.js";
 
 const port = parseInt(process.env.PORT ?? "3456", 10);
 const apiKey = process.env.API_KEY ?? "";
-const publicUrl = process.env.PUBLIC_URL ?? "https://world.example.com";
+const publicUrl = process.env.PUBLIC_URL ?? "http://localhost:3456";
 
 // Location config -- must be set in .env on each deployment.
 // No sensible default: wrong coordinates = wrong city's weather.

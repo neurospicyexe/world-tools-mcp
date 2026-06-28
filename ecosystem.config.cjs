@@ -1,6 +1,6 @@
 /**
  * pm2 ecosystem config for world-tools-mcp
- * VPS deployment (the VPS 6GB)
+ * VPS deployment (persistent host)
  *
  * Usage:
  *   pm2 start ecosystem.config.cjs        # first-time start
@@ -47,7 +47,7 @@ module.exports = {
         NODE_OPTIONS: "--dns-result-order=ipv4first",
         PORT:        env.PORT        ?? "3456",
         API_KEY:     env.API_KEY,
-        PUBLIC_URL:  env.PUBLIC_URL  ?? "https://world.example.com",
+        PUBLIC_URL:  env.PUBLIC_URL  ?? "http://localhost:3456",
         WEATHER_LAT: env.WEATHER_LAT,
         WEATHER_LON: env.WEATHER_LON,
       },
