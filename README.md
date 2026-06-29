@@ -38,8 +38,10 @@ For VPS deployment, use `pm2 start ecosystem.config.cjs` and a Cloudflare Tunnel
 | `WEATHER_LON` | Yes | Decimal longitude for weather |
 | `PUBLIC_URL` | Yes | Full URL this server is reachable at |
 | `PORT` | No | Server port (default: 3456) |
+| `DEFAULT_TIMEZONE` | No | IANA timezone (e.g. `America/New_York`) so `get_time` returns local time by default instead of UTC. Falls back to the process `TZ` if set. |
 
 `WEATHER_LAT` and `WEATHER_LON` are required — the server refuses to start without them.
+Set `DEFAULT_TIMEZONE` too, or `get_time` will only report UTC unless the caller passes a timezone.
 
 ## MCP tool namespace
 
@@ -48,3 +50,11 @@ For VPS deployment, use `pm2 start ecosystem.config.cjs` and a Cloudflare Tunnel
 ## Security
 
 See [SECURITY.md](./SECURITY.md).
+
+## Acknowledgments
+
+The original idea — a tiny MCP server bundling time, weather, and moon phase — comes from
+**[SweetSunnyBunny's Sharing-MCPs](https://github.com/SweetSunnyBunny/Sharing-MCPs/tree/main/world-tools-mcp)**.
+This is an independent reimplementation (its own server/OAuth/transport code, plus fixes for a
+process crash-loop and a default-timezone bug), shared back in the same spirit. Thank you for the
+original idea. 🌙

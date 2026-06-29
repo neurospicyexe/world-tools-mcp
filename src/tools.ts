@@ -100,6 +100,7 @@ async function getWeather(lat: number, lon: number): Promise<{
   ].join(","));
   url.searchParams.set("wind_speed_unit", "kmh");
   url.searchParams.set("forecast_days", "1");
+  url.searchParams.set("timezone", "auto");  // align any time-of-day fields to the queried location
 
   const res = await fetch(url.toString(), { signal: AbortSignal.timeout(8_000) });
   if (!res.ok) throw new Error(`open-meteo ${res.status}: ${res.statusText}`);
@@ -121,28 +122,31 @@ async function getWeather(lat: number, lon: number): Promise<{
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
-export function registerTools(server: McpServer, defaultLat: number, defaultLon: number) {
+export function registerTools(
+  server: McpServer,
+  defaultLat: number,
+  defaultLon: number,
+  defaultTimezone?: string,
+) {
   server.tool(
     "get_time",
-    "Get the current date and time in UTC and optionally a named timezone.",
-    { timezone: z.string().optional().describe("IANA timezone name e.g. America/New_York. Omit for UTC.") },
+    "Get the current date and time in UTC plus a named timezone (defaults to the server's configured timezone when one is set).",
+    { timezone: z.string().optional().describe("IANA timezone name e.g. America/New_York. Omit to use the server's configured default (or UTC only if none).") },
     async ({ timezone }) => {
       const now = new Date();
-      const utc = now.toISOString();
-      let local: string | undefined;
-      if (timezone) {
+      const tz = timezone ?? defaultTimezone;
+      const result: Record<string, string> = { utc: now.toISOString() };
+      if (tz) {
         try {
-          local = new Intl.DateTimeFormat("en-US", {
-            timeZone: timezone,
+          result[tz] = new Intl.DateTimeFormat("en-US", {
+            timeZone: tz,
             dateStyle: "full",
             timeStyle: "long",
           }).format(now);
         } catch {
-          return { content: [{ type: "text", text: `Unknown timezone: ${timezone}` }], isError: true };
+          return { content: [{ type: "text", text: `Unknown timezone: ${tz}` }], isError: true };
         }
       }
-      const result: Record<string, string> = { utc };
-      if (local && timezone) result[timezone] = local;
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     },
   );

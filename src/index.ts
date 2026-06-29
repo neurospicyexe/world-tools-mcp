@@ -22,6 +22,10 @@ const publicUrl = process.env.PUBLIC_URL ?? "http://localhost:3456";
 const defaultLat = parseFloat(process.env.WEATHER_LAT ?? "");
 const defaultLon = parseFloat(process.env.WEATHER_LON ?? "");
 
+// Optional default timezone (IANA, e.g. America/New_York). When set, get_time returns
+// local time by default instead of UTC. Falls back to the process TZ if present.
+const defaultTimezone = (process.env.DEFAULT_TIMEZONE || process.env.TZ || "").trim() || undefined;
+
 if (!apiKey) {
   console.error("[startup] API_KEY env var is required");
   process.exit(1);
@@ -47,7 +51,7 @@ const oauthProvider = new SingleUserOAuthProvider(apiKey);
 
 function makeMcpServer(): McpServer {
   const server = new McpServer({ name: "world-tools", version: "1.0.0" });
-  registerTools(server, defaultLat, defaultLon);
+  registerTools(server, defaultLat, defaultLon, defaultTimezone);
   return server;
 }
 
@@ -159,11 +163,14 @@ const shutdown = (signal: string) => {
 };
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 process.on("SIGINT", () => shutdown("SIGINT"));
+// IMPORTANT: do NOT exit on runtime errors. This is a stateless tool server, and the
+// common errors here (a client disconnecting mid-stream, an aborted fetch, the MCP
+// transport writing to a closed socket) surface as uncaughtException/unhandledRejection.
+// Exiting on those turned the process into a pm2 crash loop. Log and keep serving; real
+// fatal conditions (missing config, port bind failure) already exit during startup above.
 process.on("uncaughtException", (err) => {
-  console.error("[process] Uncaught:", err);
-  process.exit(1);
+  console.error("[process] Uncaught exception (logged, continuing):", err);
 });
 process.on("unhandledRejection", (r) => {
-  console.error("[process] Unhandled rejection:", r);
-  process.exit(1);
+  console.error("[process] Unhandled rejection (logged, continuing):", r);
 });

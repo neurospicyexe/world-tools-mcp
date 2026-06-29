@@ -32,6 +32,7 @@ PUBLIC_URL=       # https://world.yourdomain.com
 WEATHER_LAT=      # Decimal latitude for your location
 WEATHER_LON=      # Decimal longitude for your location
 PORT=3456         # Optional, default 3456
+DEFAULT_TIMEZONE= # Optional IANA tz (e.g. America/New_York); get_time defaults to UTC without it
 ```
 
 `WEATHER_LAT` and `WEATHER_LON` are required — the server will refuse to start without them. No default coordinates: wrong coords = wrong city's weather.
