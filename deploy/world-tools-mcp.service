@@ -1,0 +1,15 @@
+[Unit]
+Description=world-tools-mcp
+After=network.target
+
+[Service]
+Type=simple
+User=nullsafe
+WorkingDirectory=/home/nullsafe/world-tools-mcp
+EnvironmentFile=/home/nullsafe/world-tools-mcp/.env
+ExecStart=/home/nullsafe/.nvm/versions/node/v24.14.0/bin/node /home/nullsafe/world-tools-mcp/dist/index.js
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

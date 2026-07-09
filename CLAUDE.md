@@ -39,12 +39,35 @@ DEFAULT_TIMEZONE= # Optional IANA tz (e.g. America/New_York); get_time defaults 
 
 ## Deployment
 
-- **Process manager:** pm2 via `ecosystem.config.cjs`
+- **Process manager: systemd (`world-tools-mcp.service`). NOT pm2.**
+
+Unit file is versioned at `deploy/world-tools-mcp.service`. It binds `PORT` (3456) and reads
+`.env` via `EnvironmentFile`.
 
 ```bash
 # Deploy update
-cd ~/world-tools-mcp && git pull && npm install && npm run build && pm2 reload ecosystem.config.cjs
+cd ~/world-tools-mcp && git pull && npm install && npm run build
+sudo systemctl restart world-tools-mcp.service
+
+# Status / logs
+systemctl status world-tools-mcp.service
+journalctl -u world-tools-mcp.service -n 50 --no-pager
 
 # First-time setup
-pm2 start ecosystem.config.cjs && pm2 save
+sudo cp deploy/world-tools-mcp.service /etc/systemd/system/
+sudo systemctl daemon-reload && sudo systemctl enable --now world-tools-mcp.service
 ```
+
+### DO NOT run this under pm2 (2026-07-09)
+
+This service was supervised by **both** systemd and pm2 for months. Only one can hold port 3456,
+so pm2's copy never bound: it logged `EADDRINUSE 127.0.0.1:3456` and thrashed to **19,269
+restarts**. Each time someone "fixed" it by killing the process holding the port, they were
+killing the *healthy systemd* process; systemd restarted it (`Restart=on-failure`), pm2 lost the
+race again, and the loop resumed. The kill kept working and kept not fixing anything, because the
+bug was duplicate supervision, not a zombie.
+
+The pm2 entry was deleted (`pm2 delete world-tools && pm2 save`) and `ecosystem.config.cjs` was
+removed from this repo so the instruction that recreated it is gone. **If you find yourself
+reaching for `fuser -k` or `kill` on port 3456, stop and run `cat /proc/<pid>/cgroup` first** --
+it names the supervisor that owns the process. `PPID=1` means *systemd owns it*, not "orphan".
