@@ -1,4 +1,4 @@
-import { randomUUID, randomBytes } from "crypto";
+import { randomUUID, randomBytes, timingSafeEqual } from "crypto";
 import type { Response } from "express";
 import type { OAuthServerProvider } from "@modelcontextprotocol/sdk/server/auth/provider.js";
 import type { OAuthRegisteredClientsStore } from "@modelcontextprotocol/sdk/server/auth/clients.js";
@@ -75,7 +75,12 @@ export class SingleUserOAuthProvider implements OAuthServerProvider {
   }
 
   async verifyAccessToken(token: string): Promise<AuthInfo> {
-    if (token !== this.accessToken) throw new Error("Invalid access token");
+    // Constant-time compare. `!==` short-circuits on the first differing byte, which leaks how much of
+    // the token a caller has right. timingSafeEqual throws on unequal lengths, so check that first
+    // (length is not secret here: the token is a fixed-size random string).
+    const a = Buffer.from(token, "utf8");
+    const b = Buffer.from(this.accessToken, "utf8");
+    if (a.length !== b.length || !timingSafeEqual(a, b)) throw new Error("Invalid access token");
     return {
       token,
       clientId: this.tokenToClientId.get(token) ?? "single-user",

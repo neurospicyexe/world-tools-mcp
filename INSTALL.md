@@ -96,7 +96,6 @@ Add to Claude Desktop's MCP config:
 ```bash
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt-get install -y nodejs git
-npm install -g pm2
 ```
 
 ### 1. Get the code on your VPS
@@ -112,13 +111,20 @@ npm run build
 
 Same as Option A — create `.env` with your API key, coordinates, and set `PUBLIC_URL` to your Cloudflare Tunnel URL (you'll set this up next).
 
-### 3. Start with pm2
+### 3. Install the systemd unit
+
+The service is supervised by **systemd**, not pm2 (both held the port for months once; see `CLAUDE.md`).
 
 ```bash
-pm2 start ecosystem.config.cjs
-pm2 save
-pm2 startup  # follow the printed instruction for auto-restart on reboot
+sudo cp deploy/world-tools-mcp.service /etc/systemd/system/
+# Edit User=, WorkingDirectory=, EnvironmentFile= and the node path in ExecStart= to match your host.
+sudo systemctl daemon-reload
+sudo systemctl enable --now world-tools-mcp.service
+systemctl status world-tools-mcp.service --no-pager
 ```
+
+Updating later: `git pull && npm install && npm run build && sudo systemctl restart world-tools-mcp.service`.
+Logs: `journalctl -u world-tools-mcp.service -n 50 --no-pager`.
 
 ### 4. Set up a Cloudflare Tunnel
 
@@ -127,7 +133,7 @@ A Cloudflare Tunnel creates a secure URL for your server without opening firewal
 1. Install cloudflared: [developers.cloudflare.com/cloudflare-one/connections/connect-networks/get-started](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/get-started/)
 2. Create a tunnel pointing to `http://localhost:3456`
 3. You'll get a URL like `https://world.yourdomain.com`
-4. Update `PUBLIC_URL` in your `.env` to that URL, then `pm2 reload ecosystem.config.cjs`
+4. Update `PUBLIC_URL` in your `.env` to that URL, then `sudo systemctl restart world-tools-mcp.service`
 
 ### 5. Connect Claude
 
@@ -152,4 +158,4 @@ A Cloudflare Tunnel creates a secure URL for your server without opening firewal
 | `WEATHER_LAT and WEATHER_LON are required` | Check your `.env` file — these must both be set |
 | Weather returns wrong city | Double-check your coordinates at latlong.net |
 | `EADDRINUSE` | Something else is using port 3456. Change `PORT` in `.env` |
-| Claude can't reach it | For local: make sure `npm start` is running. For VPS: check `pm2 list` and your Cloudflare Tunnel status |
+| Claude can't reach it | For local: make sure `npm start` is running. For VPS: check `systemctl status world-tools-mcp.service` and your Cloudflare Tunnel status |

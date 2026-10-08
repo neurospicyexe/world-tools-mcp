@@ -33,3 +33,5 @@ No Halseth credentials. No companion data. This service only calls out to public
 The service runs on a local port and is exposed only through a Cloudflare Tunnel (HTTPS). It is not directly reachable from the internet without the tunnel.
 
 Because it's stateless and holds no sensitive data, the blast radius of a compromise here is minimal — the worst case is service disruption, not data loss.
+
+The OAuth flow has no consent step and dynamic client registration is open, so anyone who can reach `PUBLIC_URL` can obtain the bearer token; this is accepted by design because the server is a public time/moon/weather proxy and serves no private data.

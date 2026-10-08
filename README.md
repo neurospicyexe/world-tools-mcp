@@ -25,7 +25,7 @@ cp .env.example .env   # fill in API_KEY, WEATHER_LAT, WEATHER_LON
 npm start
 ```
 
-For VPS deployment, use `pm2 start ecosystem.config.cjs` and a Cloudflare Tunnel.
+For VPS deployment, install the systemd unit (`deploy/world-tools-mcp.service`; see [INSTALL.md](./INSTALL.md)) behind a Cloudflare Tunnel. Not pm2.
 
 **Not sure where to start?** See [INSTALL.md](./INSTALL.md) for step-by-step instructions.
 
