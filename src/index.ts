@@ -35,6 +35,10 @@ if (isNaN(defaultLat) || isNaN(defaultLon)) {
   process.exit(1);
 }
 
+if (!defaultTimezone) {
+  console.error("[startup] WARNING: no DEFAULT_TIMEZONE or TZ set; get_time will return UTC only. Set DEFAULT_TIMEZONE (IANA, e.g. America/Chicago) in .env.");
+}
+
 console.log("[startup] world-tools-mcp starting");
 console.log(`  port       : ${port}`);
 console.log(`  public_url : ${publicUrl}`);
@@ -97,12 +101,30 @@ app.use("/mcp", requireBearerAuth({ verifier: oauthProvider, resourceMetadataUrl
 // ── Session registry ──────────────────────────────────────────────────────────
 
 const transports = new Map<string, StreamableHTTPServerTransport>();
+// Sessions only leave the map on transport close, and a client that vanishes never closes. Sweep any
+// session with no request for SESSION_IDLE_MS; a client that comes back gets the 404 and re-initializes.
+const SESSION_IDLE_MS = 30 * 60_000;
+const lastSeen = new Map<string, number>();
+
+const sweepTimer = setInterval(() => {
+  const cutoff = Date.now() - SESSION_IDLE_MS;
+  for (const [sid, seen] of lastSeen) {
+    if (seen >= cutoff) continue;
+    const transport = transports.get(sid);
+    transports.delete(sid);
+    lastSeen.delete(sid);
+    console.error(`[mcp] Session expired (idle): ${sid}`);
+    transport?.close().catch(() => {});
+  }
+}, 5 * 60_000);
+sweepTimer.unref();
 
 const mcpHandler = async (req: Request, res: Response): Promise<void> => {
   try {
     const sessionId = req.headers["mcp-session-id"] as string | undefined;
 
     if (sessionId && transports.has(sessionId)) {
+      lastSeen.set(sessionId, Date.now());
       await transports.get(sessionId)!.handleRequest(req, res, req.body);
       return;
     }
@@ -113,12 +135,16 @@ const mcpHandler = async (req: Request, res: Response): Promise<void> => {
         sessionIdGenerator: reuseId ? () => reuseId : () => randomUUID(),
         onsessioninitialized: (sid) => {
           transports.set(sid, transport);
+          lastSeen.set(sid, Date.now());
           console.error(`[mcp] Session ${reuseId ? "re-registered" : "initialized"}: ${sid}`);
         },
       });
       transport.onclose = () => {
         const sid = transport.sessionId;
-        if (sid) transports.delete(sid);
+        if (sid) {
+          transports.delete(sid);
+          lastSeen.delete(sid);
+        }
       };
       await makeMcpServer().connect(transport);
       await transport.handleRequest(req, res, req.body);

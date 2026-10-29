@@ -134,6 +134,10 @@ export function registerTools(
     { timezone: z.string().optional().describe("IANA timezone name e.g. America/New_York. Omit to use the server's configured default (or UTC only if none).") },
     async ({ timezone }) => {
       const now = new Date();
+      // "" is not "omitted": falling through to UTC silently would answer a question nobody asked.
+      if (timezone !== undefined && timezone.trim() === "") {
+        return { content: [{ type: "text", text: "Empty timezone: pass an IANA name like America/New_York, or omit the argument to use the default." }], isError: true };
+      }
       const tz = timezone ?? defaultTimezone;
       const result: Record<string, string> = { utc: now.toISOString() };
       if (tz) {
